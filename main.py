@@ -10,12 +10,13 @@ from supabase import create_client
 # ✅ INIT APP
 app = FastAPI()
 
-# ✅ CORS (VERY IMPORTANT)
+# ✅ CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-    "http://localhost:5173",
-    "https://ai-hospital-receptionist-282g.onrender.com"],  # frontend URL
+        "http://localhost:5173",
+        "https://ai-hospital-receptionist-282g.onrender.com"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,7 +35,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 class PatientInput(BaseModel):
     message: str
 
-# ✅ TEMP MEMORY (CONVERSATION STATE)
+# ✅ TEMP MEMORY
 patient = {
     "name": None,
     "age": None,
@@ -43,7 +44,7 @@ patient = {
     "step": "ask_query"
 }
 
-# ✅ WARD CLASSIFICATION
+# ✅ CLASSIFIER
 def classify_ward(query: str):
     query = query.lower()
 
@@ -54,29 +55,28 @@ def classify_ward(query: str):
     else:
         return "General"
 
-# ✅ MAIN CHAT ROUTE
+# ✅ CHAT ROUTE
 @app.post("/chat")
 async def chat(data: PatientInput):
     global patient
     msg = data.message
 
-    # STEP 1: GET QUERY
+    # STEP 1
     if patient["step"] == "ask_query":
         patient["query"] = msg
         patient["ward"] = classify_ward(msg)
         patient["step"] = "ask_name"
         return {"message": "Please tell your name."}
 
-    # STEP 2: GET NAME
+    # STEP 2
     elif patient["step"] == "ask_name":
         patient["name"] = msg
         patient["step"] = "ask_age"
         return {"message": "Please tell your age."}
 
-    # STEP 3: GET AGE + FINAL PROCESS
+    # STEP 3 (FINAL)
     elif patient["step"] == "ask_age":
         patient["age"] = msg
-        patient["step"] = "done"
 
         payload = {
             "patient_name": patient["name"],
@@ -97,7 +97,7 @@ async def chat(data: PatientInput):
         except Exception as e:
             print("Supabase Error:", e)
 
-        # ✅ SEND TO n8n WEBHOOK
+        # ✅ WEBHOOK
         try:
             requests.post(
                 "https://jithinjeevan.app.n8n.cloud/webhook/hospital-ai",
@@ -106,13 +106,14 @@ async def chat(data: PatientInput):
         except Exception as e:
             print("Webhook Error:", e)
 
-        return {
-    "message": f"Thank you {patient['name']}. You are assigned to {patient['ward']} ward.",
-    "ward": patient["ward"],
-    "name": patient["name"]   # ✅ ADD THIS
-}
+        # ✅ RESPONSE FIRST
+        response = {
+            "message": f"Thank you {patient['name']}. You are assigned to {patient['ward']} ward.",
+            "ward": patient["ward"],
+            "name": patient["name"]
+        }
 
-        # 🔥 RESET FOR NEXT USER
+        # 🔥 RESET AFTER RESPONSE
         patient = {
             "name": None,
             "age": None,
@@ -123,7 +124,7 @@ async def chat(data: PatientInput):
 
         return response
 
-    # ✅ FALLBACK (SAFE RESET)
+    # ✅ FALLBACK
     patient = {
         "name": None,
         "age": None,
