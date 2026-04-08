@@ -13,7 +13,9 @@ app = FastAPI()
 # ✅ CORS (VERY IMPORTANT)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # frontend URL
+    allow_origins=[
+    "http://localhost:5173",
+    "https://ai-hospital-receptionist-282g.onrender.com"],  # frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
